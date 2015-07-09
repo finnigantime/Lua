@@ -10,6 +10,7 @@ require('strings')
 require('maths')
 require('logger')
 require('actions')
+require('logger')
 local file = require('files')
 config = require('config')
 
@@ -252,6 +253,9 @@ windower.register_event('addon command', function()
             else
                 save()
             end
+        elseif command == 'logshit' then
+            logshit()
+            return
         else
             error('Unrecognized command. See //sb help')
         end
@@ -353,13 +357,40 @@ function mob_is_ally(mob_id)
     return get_ally_mob_ids():contains(mob_id)
 end
 
+function logshit()
+    log("testing yoyo")
+    local party = windower.ffxi.get_party()
+    -- log("party:", table.vprint(party))
+    local fellow = windower.ffxi.get_mob_by_target("ft")
+    -- local t = windower.ffxi.get_mob_by_target('t')
+    local p0 = windower.ffxi.get_mob_by_target('p0')
+    log("p0:")
+    table.print(p0)
+    local p1 = windower.ffxi.get_mob_by_target('p1')
+    log("p1:")
+    -- table.vprint(p1)
+
+    log("fellow index (verified):", fellow.index)
+    log("p0.fellow_index:", p0.fellow_index)
+    log("p1.fellow_index:", p1.fellow_index)
+
+    local bar = ('gains' == 'gains' and -1 or 1)
+    log("bar:", bar)
+end
+
 
 function action_handler(raw_actionpacket)
     local actionpacket = ActionPacket.new(raw_actionpacket)
-    
+    -- asdf
+    -- log('testing')
+    -- log(table.vprint(actionpacket))
+
     local category = actionpacket:get_category_string()
 
     local player = windower.ffxi.get_player()
+    local actorid = actionpacket.raw.actor_id
+    log('action by: ', actorid, actionpacket.raw.name, ' ( player id:', player.id, player.name, ")")
+
     local pet
     if player ~= nil then
         local player_mob = windower.ffxi.get_mob_by_id(player.id)
@@ -376,15 +407,21 @@ function action_handler(raw_actionpacket)
     end
     
     for target in actionpacket:get_targets() do
+        ---log('target:', table.print(target))
         for subactionpacket in target:get_actions() do
             if (mob_is_ally(actionpacket.raw.actor_id) and not mob_is_ally(target.raw.id)) then
                 -- Ignore actions within the alliance, but parse all alliance-outwards or outwards-alliance packets.
                 local main  = subactionpacket:get_basic_info()
                 local add   = subactionpacket:get_add_effect()
                 local spike = subactionpacket:get_spike_effect()
+                log('target:', table.print(target))
+                log('subactionpacket:', table.print(subactionpacket))
+                log("main:", table.print(main))
+                log("add:", add)
+                log("spike1:", spike)
                 if main.message_id == 1 then
                     dps_db:add_m_hit(target:get_name(), create_mob_name(actionpacket), main.param)
-                elseif main.message_id == 67 then
+                elseif main.message_id == 67 then --
                     dps_db:add_m_crit(target:get_name(), create_mob_name(actionpacket), main.param)
                 elseif main.message_id == 15 or main.message_id == 63 then
                     dps_db:incr_misses(target:get_name(), create_mob_name(actionpacket))
